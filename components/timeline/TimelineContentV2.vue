@@ -1,0 +1,160 @@
+<template lang="pug">
+.mypage.row(v-if="timeline" style="padding: 1rem 1rem 0rem 1rem;")
+  div.image-status.col-md-6
+    video(
+      style="border-radius: 7px;"
+      v-if="timeline.videoUrls && typeof timeline.videoUrls === 'object' && timeline.videoUrls.length > 0 && timeline.videoUrls[0] != null"
+      ref="videoRef",
+      width="100%",
+      src="",
+      controls,
+      v-on:mouseover="VideoController(true)",
+      v-on:mouseleave="VideoController(false)",
+      muted="muted",
+    )
+    Slick.timeline-slick(
+      v-else-if="slickPaths.length != 0",
+      :paths="slickPaths",
+      :autoplay="false",
+      :dots="slickPaths.length > 1",
+      :fade="false",
+      :speed="200",
+      cssEase="ease-in",
+      :hidePaging="true"
+    )
+    div(v-if="timeline.urls && typeof timeline.urls === 'object' && timeline.urls.length > 0")
+      div(v-for="(url, id) in timeline.urls" :key="id")
+        a.no-decoration(:href="url", target="_blank", rel="noopener noreferrer")
+          link-prevue(:url="url", cardWidth="100%", :showButton="false")
+    //- p(v-html="autoLink(timeline.content)")
+  TimelineUserProfileV2.col-md-6.pt-2.pb-2(
+    v-if="timeline",
+    :name="timeline.userName",
+    :imageStoragePath="timeline.userImageStoragePath",
+    :userId="timeline.userId",
+    :createdAt="timeline.createdAt"
+    :watchCount="timeline.watch_count"
+    :content="timeline.content"
+  )
+</template>
+
+<script>
+import firebase from "~/plugins/firebase";
+
+export default {
+  data() {
+    return {
+      url: "",
+      slickPaths: [],
+    }
+  },
+  props: ['timeline'],
+  methods: {
+    initialize(){
+      if(this.timeline?.imageStoragePaths[0]) 
+       this.slickPaths.push(this.timeline?.imageStoragePaths[0])
+      if(this.timeline?.imageStoragePaths[1]) 
+       this.slickPaths.push(this.timeline?.imageStoragePaths[1])
+      if(this.timeline?.imageStoragePaths[2]) 
+       this.slickPaths.push(this.timeline?.imageStoragePaths[2])
+    },
+    autoLink(text) {
+      return text
+        ? text.replace(
+            /(https?:\/\/[^\s\/]*)(\/[^\s]{1,12})?([^\s]*)/g,
+            "<a href='$1$2$3' target='_blank' rel='noopener noreferrer'>$1$2...</a>"
+          )
+        : "";
+    },
+    setVideoPath() {
+      var storage = firebase.storage();
+      var storageRef = storage.ref(
+        this.timeline.videoUrls.length > 0 &&
+          this.timeline.videoUrls[0] != null
+          ? this.timeline.videoUrls[0].path
+          : ""
+      );
+      storageRef
+        .getDownloadURL()
+        .then((url) => {
+          var xhr = new XMLHttpRequest();
+          xhr.responseType = "blob";
+          xhr.onload = (event) => {
+            var blob = xhr.response;
+          };
+          xhr.open("GET", url);
+          // this.$refs[this.guid].setAttribute('src', url)
+          this.$refs.videoRef.src = url;
+        })
+        .catch((error) => {
+          // console.log(error);
+        });
+    },
+    VideoController(isHovering) {
+      if (isHovering == true) {
+        this.$refs.videoRef.play();
+        this.$refs.videoRef.muted = false;
+      } else if (isHovering == false) {
+        this.$refs.videoRef.pause();
+        this.$refs.videoRef.muted = true;
+      }
+    },
+  },
+  mounted() {
+    this.initialize()
+    this.setVideoPath()
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+.timeline-image > img {
+  width: 100%;
+  height: 200px;
+}
+
+.timeline-slick {
+  width: 100%;
+  overflow: hidden;
+}
+
+
+@media screen and (min-width: 1024px) {
+  .timeline-image > img {
+    width: 100%;
+    height: 300px;
+  }
+}
+
+.image-status {
+  min-width: 30%;
+  // min-height: 112.5px;
+}
+@media screen and (max-width: 768px) {
+  .image-status {
+    min-width: 100%;
+    // min-height: 112.5px;
+    text-align: center;
+  }
+}
+
+
+</style>
+
+<style lang="css">
+
+  .image-status > div > div > a > div > div > div > div.card-info {
+    display: none;
+  }
+
+  .image-status .timeline-slick .slick-track {
+    height: auto !important;
+    background: gray;
+  }
+
+  .timeline-slick .slick-slider {
+    border-radius: 1rem;
+    overflow: hidden;
+  }
+</style>
+
